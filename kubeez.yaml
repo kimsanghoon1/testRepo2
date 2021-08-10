@@ -1,0 +1,228 @@
+--- 
+apiVersion: "networking.istio.io/v1alpha3"
+kind: "Gateway"
+metadata: 
+  name: "main-gw"
+spec: 
+  selector: 
+    istio: "ingressgateway"
+  servers: 
+    - 
+      port: 
+        number: 80
+        name: ""
+        protocol: ""
+      hosts: 
+        - "*"
+--- 
+apiVersion: "networking.istio.io/v1alpha3"
+kind: "VirtualService"
+metadata: 
+  name: "canary"
+spec: 
+  hosts: 
+    - "*"
+  http: 
+    - 
+      name: ""
+      route: 
+        - 
+          destination: 
+            host: ""
+            subset: "v1"
+          weight: 90
+        - 
+          destination: 
+            host: ""
+            subset: "v1"
+          weight: 10
+      match: 
+        - 
+          uri: 
+            prefix: "/"
+      rewrite: 
+        uri: "/"
+      mirror: 
+        host: ""
+        subset: "v1"
+  gateways: 
+    - "main-gw"
+--- 
+apiVersion: "networking.istio.io/v1alpha3"
+kind: "DestinationRule"
+metadata: 
+  name: ""
+spec: 
+  host: ""
+  subsets: 
+    - 
+      name: "v1"
+      labels: 
+        version: "v1"
+        app: "order-stable"
+    - 
+      name: "v1"
+      labels: 
+        version: "v1"
+        app: "order-canary"
+    - 
+      name: "v1"
+      labels: 
+        version: "v1"
+        app: "order-shadow"
+  trafficPolicy: 
+    connectionPool: 
+      http: 
+        http1MaxPendingRequests: 1
+        maxRequestsPerConnection: 1
+      tcp: 
+        maxConnections: 1
+    outlierDetection: 
+      baseEjectionTime: "30s"
+      consecutiveErrors: 5
+      interval: "10s"
+      maxEjectionPercent: 10
+--- 
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata: 
+  name: "order-stable"
+  labels: 
+    app: "order-stable"
+    version: "v1"
+spec: 
+  selector: 
+    matchLabels: 
+      app: "order-stable"
+      version: "v1"
+  replicas: 1
+  template: 
+    metadata: 
+      labels: 
+        app: "order-stable"
+        version: "v1"
+    spec: 
+      containers: 
+        - 
+          name: "order-stable"
+          image: ""
+          ports: 
+            - 
+              containerPort: 80
+          volumeMounts: []
+      volumes: []
+--- 
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata: 
+  name: "order-canary"
+  labels: 
+    app: "order-canary"
+    version: "v1"
+spec: 
+  selector: 
+    matchLabels: 
+      app: "order-canary"
+      version: "v1"
+  replicas: 1
+  template: 
+    metadata: 
+      labels: 
+        app: "order-canary"
+        version: "v1"
+    spec: 
+      containers: 
+        - 
+          name: "order-canary"
+          image: ""
+          ports: 
+            - 
+              containerPort: 80
+          volumeMounts: []
+      volumes: []
+--- 
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata: 
+  name: "order-shadow"
+  labels: 
+    app: "order-shadow"
+    version: "v1"
+spec: 
+  selector: 
+    matchLabels: 
+      app: "order-shadow"
+      version: "v1"
+  replicas: 1
+  template: 
+    metadata: 
+      labels: 
+        app: "order-shadow"
+        version: "v1"
+    spec: 
+      containers: 
+        - 
+          name: "order-shadow"
+          image: ""
+          ports: 
+            - 
+              containerPort: 80
+          volumeMounts: []
+      volumes: []
+--- 
+apiVersion: "networking.istio.io/v1alpha3"
+kind: "VirtualService"
+metadata: 
+  name: ""
+spec: 
+  hosts: 
+    - "*"
+  http: 
+    - 
+      name: ""
+      route: 
+        - 
+          destination: 
+            host: ""
+            subset: "v1"
+          weight: 100
+      match: 
+        - 
+          uri: 
+            prefix: "/"
+      rewrite: 
+        uri: "/"
+  gateways: 
+    - "main-gw"
+--- 
+apiVersion: "networking.istio.io/v1alpha3"
+kind: "DestinationRule"
+metadata: 
+  name: ""
+spec: 
+  host: ""
+  subsets: 
+    - 
+      name: "v1"
+      labels: 
+        version: "v1"
+    - 
+      name: "v1"
+      labels: 
+        version: "v1"
+    - 
+      name: "v1"
+      labels: 
+        version: "v1"
+  trafficPolicy: 
+    connectionPool: 
+      http: 
+        http1MaxPendingRequests: 1
+        maxRequestsPerConnection: 1
+      tcp: 
+        maxConnections: 1
+    outlierDetection: 
+      baseEjectionTime: "30s"
+      consecutiveErrors: 5
+      interval: "10s"
+      maxEjectionPercent: 10
